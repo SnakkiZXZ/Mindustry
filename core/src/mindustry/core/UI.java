@@ -108,7 +108,7 @@ public class UI implements ApplicationListener, Loadable{
         Dialog.setHideAction(() -> sequence(fadeOut(0.1f)));
 
         Tooltips.getInstance().animations = false;
-        Tooltips.getInstance().textProvider = text -> new Tooltip(t -> t.background(Styles.black5).margin(4f).add(text));
+        Tooltips.getInstance().textProvider = text -> new Tooltip(t -> t.background(Styles.black6).margin(4f).add(text));
 
         Core.settings.setErrorHandler(e -> {
             Log.err(e);
@@ -214,16 +214,15 @@ public class UI implements ApplicationListener, Loadable{
     @Override
     public void resize(int width, int height){
         if(Core.scene == null) return;
+
+        int[] insets = Core.graphics.getSafeInsets();
+        Core.scene.marginLeft = insets[0];
+        Core.scene.marginRight = insets[1];
+        Core.scene.marginTop = insets[2];
+        Core.scene.marginBottom = insets[3];
+
         Core.scene.resize(width, height);
         Events.fire(new ResizeEvent());
-    }
-
-    @Override
-    public void dispose(){
-        if(packer != null){
-            packer.dispose();
-            packer = null;
-        }
     }
 
     public TextureRegionDrawable getIcon(String name){
@@ -359,6 +358,16 @@ public class UI implements ApplicationListener, Loadable{
                 hide();
                 listener.run();
             }).size(110, 50).pad(4);
+            closeOnBack();
+        }}.show();
+    }
+
+    public void showInfoOnHidden(String info, Runnable listener){
+        new Dialog(""){{
+            getCell(cont).growX();
+            cont.margin(15).add(info).width(400f).wrap().get().setAlignment(Align.center, Align.center);
+            buttons.button("@ok", this::hide).size(110, 50).pad(4);
+            hidden(listener);
             closeOnBack();
         }}.show();
     }
@@ -526,16 +535,20 @@ public class UI implements ApplicationListener, Loadable{
         dialog.show();
     }
 
-    public static String formatAmount(int number){
-        int mag = Math.abs(number);
+    public static String formatAmount(long number){
+        //prevent overflow
+        if(number == Long.MIN_VALUE) number ++;
+
+        long mag = Math.abs(number);
+        String sign = number < 0 ? "-" : "";
         if(mag >= 1_000_000_000){
-            return Strings.fixed(number / 1_000_000_000f, 1) + "[gray]" + Core.bundle.get("unit.billions") + "[]";
+            return sign + Strings.fixed(mag / 1_000_000_000f, 1) + "[gray]" + Core.bundle.get("unit.billions") + "[]";
         }else if(mag >= 1_000_000){
-            return Strings.fixed(number / 1_000_000f, 1) + "[gray]" + Core.bundle.get("unit.millions") + "[]";
+            return sign + Strings.fixed(mag / 1_000_000f, 1) + "[gray]" + Core.bundle.get("unit.millions") + "[]";
         }else if(mag >= 10_000){
             return number / 1000 + "[gray]" + Core.bundle.get("unit.thousands") + "[]";
         }else if(mag >= 1000){
-            return Strings.fixed(number / 1000f, 1) + "[gray]" + Core.bundle.get("unit.thousands") + "[]";
+            return sign + Strings.fixed(mag / 1000f, 1) + "[gray]" + Core.bundle.get("unit.thousands") + "[]";
         }else{
             return number + "";
         }

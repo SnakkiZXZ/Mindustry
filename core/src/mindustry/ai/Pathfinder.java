@@ -23,7 +23,6 @@ public class Pathfinder implements Runnable{
     private static final int updateFPS = 60;
     private static final int updateInterval = 1000 / updateFPS;
     private static final int impassable = -1;
-    private static final int fieldTimeout = 1000 * 60 * 2;
 
     public static final int
         fieldCore = 0,
@@ -109,7 +108,7 @@ public class Pathfinder implements Runnable{
 
     /** Packs a tile into its internal representation. */
     private int packTile(Tile tile){
-        boolean nearLiquid = false, nearSolid = false, nearGround = false;
+        boolean nearLiquid = false, nearSolid = false, nearGround = false, solid = tile.solid();
 
         for(int i = 0; i < 4; i++){
             Tile other = tile.nearby(i);
@@ -121,9 +120,9 @@ public class Pathfinder implements Runnable{
         }
 
         return PathTile.get(
-            tile.build == null || !tile.solid() || tile.block() instanceof CoreBlock ? 0 : Math.min((int)(tile.build.health / 40), 80),
+            tile.build == null || !solid || tile.block() instanceof CoreBlock ? 0 : Math.min((int)(tile.build.health / 40), 80),
             tile.getTeamID(),
-            tile.solid(),
+            solid,
             tile.floor().isLiquid,
             tile.staticDarkness() >= 2 || (tile.floor().solid && tile.block() == Blocks.air),
             nearLiquid,
@@ -150,7 +149,7 @@ public class Pathfinder implements Runnable{
     }
 
     /** Update a tile in the internal pathfinding grid.
-     * Causes a complete pathfinding reclaculation. Main thread only. */
+     * Causes a complete pathfinding recalculation. Main thread only. */
     public void updateTile(Tile tile){
         if(net.client()) return;
 
@@ -192,31 +191,6 @@ public class Pathfinder implements Runnable{
                     //total update time no longer than maxUpdate
                     for(Flowfield data : threadList){
                         updateFrontier(data, maxUpdate / threadList.size);
-
-                        //TODO implement timeouts... or don't
-                        /*
-                        //remove flowfields that have 'timed out' so they can be garbage collected and no longer waste space
-                        if(data.refreshRate > 0 && Time.timeSinceMillis(data.lastUpdateTime) > fieldTimeout){
-                            //make sure it doesn't get removed twice
-                            data.lastUpdateTime = Time.millis();
-
-                            Team team = data.team;
-
-                            Core.app.post(() -> {
-                                //remove its used state
-                                if(fieldMap[team.id] != null){
-                                    fieldMap[team.id].remove(data.target);
-                                    fieldMapUsed[team.id].remove(data.target);
-                                }
-                                //remove from main thread list
-                                mainList.remove(data);
-                            });
-
-                            queue.post(() -> {
-                                //remove from this thread list with a delay
-                                threadList.remove(data);
-                            });
-                        }*/
                     }
                 }
 

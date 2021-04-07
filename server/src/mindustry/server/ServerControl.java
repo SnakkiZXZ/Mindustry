@@ -66,7 +66,7 @@ public class ServerControl implements ApplicationListener{
             "bans", "",
             "admins", "",
             "shufflemode", "custom",
-            "globalrules", "{reactorExplosions: false}"
+            "globalrules", "{reactorExplosions: false, logicUnitBuild: false}"
         );
 
         //update log level
@@ -238,8 +238,8 @@ public class ServerControl implements ApplicationListener{
         Events.on(PlayEvent.class, e -> {
 
             try{
-                JsonValue value = JsonIO.json().fromJson(null, Core.settings.getString("globalrules"));
-                JsonIO.json().readFields(state.rules, value);
+                JsonValue value = JsonIO.json.fromJson(null, Core.settings.getString("globalrules"));
+                JsonIO.json.readFields(state.rules, value);
             }catch(Throwable t){
                 err("Error applying custom rules, proceeding without them.", t);
             }
@@ -339,7 +339,7 @@ public class ServerControl implements ApplicationListener{
             if(!maps.all().isEmpty()){
                 info("Maps:");
                 for(Map map : maps.all()){
-                    info("  @: &fi@ / @x@", map.name(), map.custom ? "Custom" : "Default", map.width, map.height);
+                    info("  @: &fi@ / @x@", map.name().replace(' ', '_'), map.custom ? "Custom" : "Default", map.width, map.height);
                 }
             }else{
                 info("No maps found.");
@@ -433,7 +433,7 @@ public class ServerControl implements ApplicationListener{
 
         handler.register("rules", "[remove/add] [name] [value...]", "List, remove or add global rules. These will apply regardless of map.", arg -> {
             String rules = Core.settings.getString("globalrules");
-            JsonValue base = JsonIO.json().fromJson(null, rules);
+            JsonValue base = JsonIO.json.fromJson(null, rules);
 
             if(arg.length == 0){
                 info("Rules:\n@", JsonIO.print(rules));
@@ -467,7 +467,7 @@ public class ServerControl implements ApplicationListener{
                         JsonValue parent = new JsonValue(ValueType.object);
                         parent.addChild(value);
 
-                        JsonIO.json().readField(state.rules, value.name, parent);
+                        JsonIO.json.readField(state.rules, value.name, parent);
                         if(base.has(value.name)){
                             base.remove(value.name);
                         }
@@ -554,7 +554,7 @@ public class ServerControl implements ApplicationListener{
                             return;
                         }
                     }else if(c.isString()){
-                        c.set(arg[1]);
+                        c.set(arg[1].replace("\\n", "\n"));
                     }
 
                     info("@ set to @.", c.name(), c.get());

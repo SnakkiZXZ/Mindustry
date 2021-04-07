@@ -2,7 +2,6 @@ package mindustry.core;
 
 import arc.*;
 import arc.files.*;
-import arc.fx.*;
 import arc.graphics.*;
 import arc.graphics.g2d.*;
 import arc.graphics.gl.*;
@@ -38,13 +37,8 @@ public class Renderer implements ApplicationListener{
     public float minZoom = 1.5f, maxZoom = 6f;
 
     private @Nullable CoreBuild landCore;
-    //TODO unused
-    private FxProcessor fx = new FxProcessor();
     private Color clearColor = new Color(0f, 0f, 0f, 1f);
-    private float targetscale = Scl.scl(4);
-    private float camerascale = targetscale;
-    private float landscale = 0f, landTime, weatherAlpha;
-    private float minZoomScl = Scl.scl(0.01f);
+    private float targetscale = Scl.scl(4), camerascale = targetscale, landscale, landTime, weatherAlpha, minZoomScl = Scl.scl(0.01f);
     private float shakeIntensity, shaketime;
 
     public Renderer(){
@@ -73,7 +67,6 @@ public class Renderer implements ApplicationListener{
     @Override
     public void update(){
         Color.white.set(1f, 1f, 1f, 1f);
-        Gl.clear(Gl.stencilBufferBit);
 
         float dest = Mathf.round(targetscale, 0.5f);
         camerascale = Mathf.lerpDelta(camerascale, dest, 0.1f);
@@ -122,23 +115,7 @@ public class Renderer implements ApplicationListener{
 
     @Override
     public void dispose(){
-        minimap.dispose();
-        effectBuffer.dispose();
-        blocks.dispose();
-        if(planets != null){
-            planets.dispose();
-            planets = null;
-        }
-        if(bloom != null){
-            bloom.dispose();
-            bloom = null;
-        }
         Events.fire(new DisposeEvent());
-    }
-
-    @Override
-    public void resize(int width, int height){
-        fx.resize(width, height);
     }
 
     @Override
@@ -173,23 +150,6 @@ public class Renderer implements ApplicationListener{
                 bloom = null;
             }
         }
-    }
-
-    void beginFx(){
-        if(!fx.hasEnabledEffects()) return;
-
-        Draw.flush();
-        fx.clear();
-        fx.begin();
-    }
-
-    void endFx(){
-        if(!fx.hasEnabledEffects()) return;
-
-        Draw.flush();
-        fx.end();
-        fx.applyEffects();
-        fx.render(0, 0, fx.getWidth(), fx.getHeight());
     }
 
     void updateShake(float scale){
@@ -236,7 +196,7 @@ public class Renderer implements ApplicationListener{
         Draw.draw(Layer.background, this::drawBackground);
         Draw.draw(Layer.floor, blocks.floor::drawFloor);
         Draw.draw(Layer.block - 1, blocks::drawShadows);
-        Draw.draw(Layer.block, () -> {
+        Draw.draw(Layer.block - 0.09f, () -> {
             blocks.floor.beginDraw();
             blocks.floor.drawLayer(CacheLayer.walls);
             blocks.floor.endDraw();
@@ -354,7 +314,7 @@ public class Renderer implements ApplicationListener{
         int w = world.width() * tilesize, h = world.height() * tilesize;
         int memory = w * h * 4 / 1024 / 1024;
 
-        if(memory >= 65){
+        if(memory >= (mobile ? 65 : 120)){
             ui.showInfo("@screenshot.invalid");
             return;
         }

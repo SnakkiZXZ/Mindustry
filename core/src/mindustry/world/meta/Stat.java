@@ -7,6 +7,7 @@ import java.util.*;
 /** Describes one type of stat for content. */
 public enum Stat{
     health,
+    armor,
     size,
     displaySize,
     buildTime,
@@ -32,6 +33,13 @@ public enum Stat{
     abilities,
     canBoost,
     maxUnits,
+
+    damageMultiplier,
+    healthMultiplier,
+    speedMultiplier,
+    reloadMultiplier,
+    buildSpeedMultiplier,
+    reactive,
 
     itemCapacity(StatCat.items),
     itemsMoved(StatCat.items),
@@ -77,7 +85,8 @@ public enum Stat{
 
     booster(StatCat.optional),
     boostEffect(StatCat.optional),
-    affinities(StatCat.optional);
+    affinities(StatCat.optional),
+    opposites(StatCat.optional);
 
     public final StatCat category;
 

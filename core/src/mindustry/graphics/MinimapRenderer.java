@@ -19,7 +19,7 @@ import mindustry.world.*;
 
 import static mindustry.Vars.*;
 
-public class MinimapRenderer implements Disposable{
+public class MinimapRenderer{
     private static final float baseSize = 16f;
     private final Seq<Unit> units = new Seq<>();
     private Pixmap pixmap;
@@ -96,7 +96,8 @@ public class MinimapRenderer implements Disposable{
 
             Draw.mixcol(unit.team().color, 1f);
             float scale = Scl.scl(1f) / 2f * scaling * 32f;
-            Draw.rect(unit.type.icon(Cicon.full), x + rx, y + ry, scale, scale, unit.rotation() - 90);
+            var region = unit.type.icon(Cicon.full);
+            Draw.rect(region, x + rx, y + ry, scale, scale * (float)region.height / region.width, unit.rotation() - 90);
             Draw.reset();
         }
 
@@ -167,16 +168,6 @@ public class MinimapRenderer implements Disposable{
         color.mul(1f - Mathf.clamp(world.getDarkness(tile.x, tile.y) / 4f));
 
         return color.rgba();
-    }
-
-    @Override
-    public void dispose(){
-        if(pixmap != null && texture != null){
-            pixmap.dispose();
-            texture.dispose();
-            texture = null;
-            pixmap = null;
-        }
     }
 
     public void drawLabel(float x, float y, String text, Color color){

@@ -26,6 +26,7 @@ import mindustry.world.*;
 import mindustry.world.modules.*;
 
 import java.io.*;
+import java.util.*;
 import java.util.zip.*;
 
 import static mindustry.Vars.*;
@@ -65,6 +66,13 @@ public class NetClient implements ApplicationListener{
 
             reset();
 
+            //connection after reset
+            if(!net.client()){
+                Log.info("Connection canceled.");
+                disconnectQuietly();
+                return;
+            }
+
             ui.loadfrag.hide();
             ui.loadfrag.show("@connecting.data");
 
@@ -73,8 +81,14 @@ public class NetClient implements ApplicationListener{
                 disconnectQuietly();
             });
 
-            ConnectPacket c = new ConnectPacket();
+            String locale = Core.settings.getString("locale");
+            if(locale.equals("default")){
+                locale = Locale.getDefault().toString();
+            }
+
+            var c = new ConnectPacket();
             c.name = player.name;
+            c.locale = locale;
             c.mods = mods.getModStrings();
             c.mobile = mobile;
             c.versionType = Version.type;
@@ -174,24 +188,34 @@ public class NetClient implements ApplicationListener{
     //called when a server receives a chat message from a player
     @Remote(called = Loc.server, targets = Loc.client)
     public static void sendChatMessage(Player player, String message){
+
+        //do not receive chat messages from clients that are too young or not registered
+        if(net.server() && player != null && player.con != null && (Time.timeSinceMillis(player.con.connectTime) < 500 || !player.con.hasConnected || !player.isAdded())) return;
+
         if(message.length() > maxTextLength){
             throw new ValidateException(player, "Player has sent a message above the text limit.");
         }
 
         Events.fire(new PlayerChatEvent(player, message));
 
+        //log commands before they are handled
+        if(message.startsWith(netServer.clientCommands.getPrefix())){
+            //log with brackets
+            Log.info("<&fi@: @&fr>", "&lk" + player.name, "&lw" + message);
+        }
+
         //check if it's a command
         CommandResponse response = netServer.clientCommands.handleMessage(message, player);
         if(response.type == ResponseType.noCommand){ //no command to handle
             message = netServer.admins.filterMessage(player, message);
-            //supress chat message if it's filtered out
+            //suppress chat message if it's filtered out
             if(message == null){
                 return;
             }
 
             //special case; graphical server needs to see its message
             if(!headless){
-                sendMessage(message, colorizeName(player.id(), player.name), player);
+                sendMessage(message, colorizeName(player.id, player.name), player);
             }
 
             //server console logging
@@ -201,8 +225,6 @@ public class NetClient implements ApplicationListener{
             //this is required so other clients get the correct name even if they don't know who's sending it yet
             Call.sendMessage(message, colorizeName(player.id(), player.name), player);
         }else{
-            //log command to console but with brackets
-            Log.info("<&fi@: @&fr>", "&lk" + player.name, "&lw" + message);
 
             //a command was sent, now get the output
             if(response.type != ResponseType.valid){
@@ -396,7 +418,6 @@ public class NetClient implements ApplicationListener{
             netClient.byteStream.setBytes(net.decompressSnapshot(data, dataLen));
             DataInputStream input = netClient.dataStream;
 
-            //go through each entity
             for(int j = 0; j < amount; j++){
                 int id = input.readInt();
                 byte typeID = input.readByte();
@@ -445,9 +466,14 @@ public class NetClient implements ApplicationListener{
 
             for(int i = 0; i < amount; i++){
                 int pos = input.readInt();
+                short block = input.readShort();
                 Tile tile = world.tile(pos);
                 if(tile == null || tile.build == null){
                     Log.warn("Missing entity at @. Skipping block snapshot.", tile);
+                    break;
+                }
+                if(tile.build.block.id != block){
+                    Log.warn("Block ID mismatch at @: @ != @. Skipping block snapshot.", tile, tile.build.block.id, block);
                     break;
                 }
                 tile.build.readAll(Reads.get(input), tile.build.version());
@@ -476,7 +502,7 @@ public class NetClient implements ApplicationListener{
             netClient.byteStream.setBytes(net.decompressSnapshot(coreData, coreDataLen));
             DataInputStream input = netClient.dataStream;
 
-            byte cores = input.readByte();
+            int cores = input.readInt();
             for(int i = 0; i < cores; i++){
                 int pos = input.readInt();
                 Tile tile = world.tile(pos);
@@ -615,7 +641,7 @@ public class NetClient implements ApplicationListener{
             lastSent++,
             uid,
             player.dead(),
-            unit.x, unit.y,
+            player.dead() ? player.x : unit.x, player.dead() ? player.y : unit.y,
             player.unit().aimX(), player.unit().aimY(),
             unit.rotation,
             unit instanceof Mechc m ? m.baseRotation() : 0,

@@ -43,6 +43,7 @@ ios/robovm.properties
 packr-out/
 config/
 *.gif
+/tests/out
 
 /core/assets/basepartnames
 version.properties
@@ -100,6 +101,10 @@ com_crashlytics_export_strings.xml
 .loadpath
 .externalToolBuilders/
 *.launch
+
+## VSCode
+
+.vscode/
 
 ## NetBeans
 

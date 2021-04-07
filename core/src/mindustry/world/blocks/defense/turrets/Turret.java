@@ -78,6 +78,7 @@ public class Turret extends ReloadTurret{
 
     public @Load(value = "@-base", fallback = "block-@size") TextureRegion baseRegion;
     public @Load("@-heat") TextureRegion heatRegion;
+    public float elevation = -1f;
 
     public Cons<TurretBuild> drawer = tile -> Draw.rect(region, tile.x + tr2.x, tile.y + tr2.y, tile.rotation - 90);
     public Cons<TurretBuild> heatDrawer = tile -> {
@@ -92,12 +93,6 @@ public class Turret extends ReloadTurret{
 
     public Turret(String name){
         super(name);
-        priority = TargetPriority.turret;
-        update = true;
-        solid = true;
-        group = BlockGroup.turrets;
-        flags = EnumSet.of(BlockFlag.turret);
-        outlineIcon = true;
         liquidCapacity = 20f;
     }
 
@@ -125,6 +120,7 @@ public class Turret extends ReloadTurret{
         }
         
         if(shootLength < 0) shootLength = size * tilesize / 2f;
+        if(elevation < 0) elevation = size / 2f;
 
         super.init();
     }
@@ -234,7 +230,7 @@ public class Turret extends ReloadTurret{
 
             tr2.trns(rotation, -recoil);
 
-            Drawf.shadow(region, x + tr2.x - (size / 2f), y + tr2.y - (size / 2f), rotation - 90);
+            Drawf.shadow(region, x + tr2.x - elevation, y + tr2.y - elevation, rotation - 90);
             drawer.get(this);
 
             if(heatRegion != Core.atlas.find("error")){
@@ -357,7 +353,7 @@ public class Turret extends ReloadTurret{
         }
 
         protected void updateShooting(){
-            if(reload >= reloadTime){
+            if(reload >= reloadTime && !charging){
                 BulletType type = peekAmmo();
 
                 shoot(type);

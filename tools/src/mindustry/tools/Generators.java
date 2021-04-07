@@ -246,7 +246,7 @@ public class Generators{
                     Image last = null;
                     if(block.outlineIcon){
                         int radius = 4;
-                        GenRegion region = (GenRegion)regions[regions.length - 1];
+                        GenRegion region = (GenRegion)regions[block.outlinedIcon >= 0 ? block.outlinedIcon : regions.length -1];
                         Image base = ImagePacker.get(region);
                         Image out = last = new Image(region.width, region.height);
                         for(int x = 0; x < out.width; x++){
@@ -269,6 +269,14 @@ public class Generators{
                                         out.draw(x, y, block.outlineColor);
                                     }
                                 }
+                            }
+                        }
+
+                        //do not run for legacy ones
+                        if(block.outlinedIcon >= 0){
+                            //prevents the regions above from being ignored/invisible/etc
+                            for(int i = block.outlinedIcon + 1; i < regions.length; i++){
+                                out.draw(ImagePacker.get(regions[i]));
                             }
                         }
 
@@ -368,13 +376,29 @@ public class Generators{
         });
 
         ImagePacker.generate("item-icons", () -> {
-            for(UnlockableContent item : Seq.<UnlockableContent>withArrays(content.items(), content.liquids())){
+            for(UnlockableContent item : Seq.<UnlockableContent>withArrays(content.items(), content.liquids(), content.statusEffects())){
+                if(item instanceof StatusEffect && !ImagePacker.has(item.getContentType().name() + "-" + item.name)){
+                    continue;
+                }
+
                 Image base = ImagePacker.get(item.getContentType().name() + "-" + item.name);
+                //tint status effect icon color
+                if(item instanceof StatusEffect){
+                    StatusEffect stat = (StatusEffect)item;
+                    Image tint = base;
+                    base.each((x, y) -> tint.draw(x, y, tint.getColor(x, y).mul(stat.color)));
+
+                    //outline the image
+                    Image container = new Image(38, 38);
+                    container.draw(base, 3, 3);
+                    base = container.outline(3, Pal.gray);
+                }
+
                 for(Cicon icon : Cicon.scaled){
                     //if(icon.size == base.width) continue;
                     Image image = new Image(icon.size, icon.size);
                     image.drawScaled(base);
-                    image.save(item.getContentType().name() + "-" + item.name + "-" + icon.name(), false);
+                    image.save((item instanceof StatusEffect ? "../ui/" : "") + item.getContentType().name() + "-" + item.name + "-" + icon.name(), !(item instanceof StatusEffect));
 
                     if(icon == Cicon.medium){
                         image.save("../ui/" + item.getContentType() + "-" + item.name + "-icon");
